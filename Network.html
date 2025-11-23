@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>NeuroTrace: System Reboot</title>
-    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Fonts -->
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
@@ -196,18 +194,22 @@
 </head>
 <body>
 
-<!-- HOME SCREEN -->
 <div id="home-screen" class="screen">
+    <div class="w-full max-w-[800px] mb-4 flex justify-start">
+        <button onclick="window.location.href='https://sites.google.com/view/mrknoxpuzzles/slide-puzzle'" 
+                class="border border-red-500 text-red-400 hover:bg-red-900/30 px-4 py-2 rounded text-xs uppercase tracking-widest transition-all">
+            &larr; Return to Site
+        </button>
+    </div>
+
     <div class="text-center mb-8">
         <div class="text-4xl md:text-6xl font-bold mb-2 tracking-tighter" style="text-shadow: 0 0 20px #00ffcc;">NEUROTRACE</div>
         <div class="text-xs md:text-sm text-gray-400 tracking-[0.5em] uppercase">System Level Select</div>
     </div>
     
     <div id="level-grid" class="level-grid">
-        <!-- JS Generates Grid Here -->
-    </div>
+        </div>
 
-    <!-- Clear Data Utility -->
     <div class="mt-8">
         <button onclick="clearProgress()" class="text-xs text-red-900 hover:text-red-500 transition-colors uppercase tracking-widest border-b border-transparent hover:border-red-500 pb-1">
             Reset System Data
@@ -215,7 +217,6 @@
     </div>
 </div>
 
-<!-- GAME SCREEN -->
 <div id="game-screen" class="screen hidden-screen">
     <div id="game-container" class="relative w-full h-full">
         <canvas id="gameCanvas"></canvas>
@@ -227,7 +228,6 @@
     
         <div class="ui-layer">
             <div class="flex justify-between items-center w-full">
-                <!-- Navigation -->
                 <div class="flex items-center gap-2">
                     <button id="home-btn" class="hud-btn" title="Return to Menu">⌂</button>
                     <button id="prev-btn" class="hud-btn w-10 h-10 text-xl font-mono">&lt;</button>
@@ -250,7 +250,6 @@
             </div>
         </div>
     
-        <!-- Modal -->
         <div id="modal-overlay">
             <div class="modal-box">
                 <h2 id="modal-title" class="text-2xl md:text-3xl font-bold mb-4 text-white">LEVEL COMPLETE</h2>
@@ -722,3 +721,34 @@
     }
 
     function checkWin
+}
+
+---
+
+### Part 3: GitHub Setup (How to make it work)
+
+Since you have multiple games, you need to set up your repository with clean file names.
+
+1.  **Rename Files:**
+    * Rename the provided "Red Slide" code to: `slide.html`
+    * Rename the provided "NeuroTrace" code to: `network.html`
+    * *(Optional)* Create a main menu `index.html` (I can provide code for this if you want a fancy hub, or you can just link directly to the files).
+
+2.  **Upload to GitHub:**
+    * Go to your repository `puzzles`.
+    * Click **Add file** > **Upload files**.
+    * Upload `slide.html` and `network.html`.
+    * Click **Commit changes**.
+
+3.  **Get Your Links:**
+    Your links will now be:
+    * **Slide Puzzle:** `https://[your-username].github.io/puzzles/slide.html`
+    * **NeuroTrace:** `https://[your-username].github.io/puzzles/network.html`
+
+4.  **Update Google Sites:**
+    * Go to your site editor.
+    * On the "Slide Puzzle" page, create an **Image** or **Button**.
+    * Set the link to: `https://[your-username].github.io/puzzles/slide.html`.
+    * Repeat for NeuroTrace.
+
+Now, when students click the link, they go to the full-screen GitHub version. When they want to leave, they click the red "EXIT TO SITE" button, and it takes them right back to your Google Site classroom!
