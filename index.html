@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mr Knox's Arcade</title>
+    <style>
+        body {
+            background-color: #111;
+            color: white;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        h1 { color: #00e5ff; text-shadow: 0 0 10px #00e5ff; margin-bottom: 40px; }
+        
+        .game-btn {
+            display: block;
+            width: 300px;
+            padding: 20px;
+            margin: 15px;
+            background: #003344;
+            border: 2px solid #00e5ff;
+            color: white;
+            text-decoration: none;
+            text-align: center;
+            font-size: 1.5rem;
+            border-radius: 10px;
+            transition: 0.2s;
+        }
+        .game-btn:hover { background: #005566; transform: scale(1.05); box-shadow: 0 0 20px #00e5ff; }
+        
+        /* Style for future games not yet ready */
+        .disabled { border-color: #555; color: #555; background: #222; pointer-events: none; }
+    </style>
+</head>
+<body>
+
+    <h1>MATHS ARCADE</h1>
+
+    <a href="slide.html" class="game-btn">🧩 Cyber Slide</a>
+
+    <a href="#" class="game-btn disabled">🧠 Maths Memory (Coming Soon)</a>
+
+</body>
+</html>
