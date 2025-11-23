@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mr Knox Puzzles</title>
+    <style>
+        :root {
+            --bg-color: #001a2d;
+            --grid-line: #00e5ff;
+            --block-border: #ffd700;
+            --water-light: #00aadd;
+            --water-dark: #0077aa;
+            --lava-light: #ff4444;
+            --lava-dark: #cc0000;
+            --menu-btn-bg: #003344;
+            --menu-btn-hover: #005566;
+        }
+
+        body {
+            background-color: #111;
+            color: white;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            touch-action: none; 
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #menu-screen {
+            display: flex; 
+            flex-direction: column;
+            align-items: center;
+            width: 95vw;
+            max-width: 500px;
+            height: 95vh;
+            max-height: 600px;
+        }
+
+        h1.title {
+            color: var(--grid-line);
+            text-shadow: 0 0 10px var(--grid-line);
+            margin-bottom: 20px;
+            font-size: 2rem;
+            text-align: center;
+        }
+
+        #level-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            width: 100%;
+            overflow-y: auto;
+            padding: 5px;
+        }
+
+        .lvl-btn {
+            background-color: var(--menu-btn-bg);
+            border: 2px solid var(--grid-line);
+            border-radius: 8px;
+            color: white;
+            padding: 15px 5px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            min-height: 70px;
+        }
+
+        .lvl-btn:hover { transform: translateY(-2px); box-shadow: 0 0 15px var(--grid-line); background: var(--menu-btn-hover); }
+        
+        .lvl-btn.locked {
+            background-color: #222;
+            border-color: #444;
+            color: #555;
+            cursor: not-allowed;
+        }
+        .lvl-btn.locked:hover { transform: none; box-shadow: none; }
+
+        .lvl-num { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; }
+        .lvl-score { font-size: 0.8rem; color: #ffd700; }
+        .lock-icon { font-size: 1.5rem; }
+
+        #game-screen {
+            display: none; 
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #ui-top {
+            width: 95vw;
+            max-width: 500px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--grid-line);
+            text-shadow: 0 0 5px rgba(0, 229, 255, 0.5);
+        }
+
+        #home-btn {
+            background: none;
+            border: 1px solid var(--grid-line);
+            color: var(--grid-line);
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        #home-btn:hover { background: rgba(0, 229, 255, 0.2); }
+
+        .stat-box { display: flex; gap: 15px; align-items: center; }
+        #move-counter { color: #fff; }
+        #best-score { color: #ffd700; }
+
+        #game-container {
+            position: relative;
+            width: 95vw;
+            height: 95vw;
+            max-width: 500px;
+            max-height: 500px;
+            background-color: var(--bg-color);
+            border-radius: 8px;
+            overflow: hidden;
+            padding: 4px;
+            box-sizing: border-box;
+            box-shadow: 0 0 0 4px var(--grid-line), 0 0 20px rgba(0, 229, 255, 0.3);
+        }
+
+        #grid-bg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+            background-size: 16.66% 16.66%;
+            background-position: -1px -1px;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .block {
+            position: absolute;
+            box-sizing: border-box;
+            border: 3px solid var(--block-border);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 0.05s linear;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 20%), repeating-radial-gradient(circle at 50% 50%, var(--water-light) 0%, var(--water-dark) 20%, var(--water-light) 40%);
+            background-size: 200% 200%;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5), 2px 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .block.target { 
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 20%), repeating-radial-gradient(circle at 50% 50%, var(--lava-light) 0%, var(--lava-dark) 20%, var(--lava-light) 40%);
+            z-index: 10;
+        }
+
+        #exit {
+            position: absolute;
+            right: 0; top: 33.33%; height: 16.66%; width: 4px;
+            background-color: var(--grid-line);
+            box-shadow: 0 0 10px var(--grid-line);
+            z-index: 5;
+        }
+
+        #controls { margin-top: 20px; display: flex; gap: 15px; }
+
+        .game-btn {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            background: rgba(0, 229, 255, 0.1);
+            color: var(--grid-line);
+            border: 1px solid var(--grid-line);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .game-btn:hover { background: rgba(0, 229, 255, 0.3); box-shadow: 0 0 10px var(--grid-line); }
+        .game-btn:active { background: rgba(0, 229, 255, 0.5); }
+        .game-btn:disabled { background: #222; color: #555; border-color: #333; cursor: not-allowed; box-shadow: none; }
+
+        #win-msg {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 26, 45, 0.95);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            text-align: center;
+            padding: 20px;
+        }
+        #win-msg h1 { color: #4CAF50; font-size: 3rem; margin: 0 0 10px 0; text-shadow: 0 0 10px #4CAF50; }
+        #win-stats { color: white; font-size: 1.2rem; margin-bottom: 25px; text-align: center; line-height: 1.5; }
+        #win-msg button {
+            background: #4CAF50; color: white; border: none; box-shadow: 0 0 15px #4CAF50; 
+            padding: 15px 30px; font-size: 1.2rem; border-radius: 5px; cursor: pointer; font-weight: bold;
+        }
+        #win-msg button:hover { background: #45a049; }
+    </style>
+</head>
+<body>
+
+    <div id="menu-screen">
+        <h1 class="title">CYBER SLIDE</h1>
+        <div id="level-grid"></div>
+    </div>
+
+    <div id="game-screen">
+        <div id="ui-top">
+            <button id="home-btn" onclick="showMenu()">🏠 Home</button>
+            <span id="level-label">Level 1</span>
+            <div class="stat-box">
+                <span id="move-counter">Moves: 0</span>
+                <span id="best-score">Best: -</span>
+            </div>
+        </div>
+
+        <div id="game-container">
+            <div id="grid-bg"></div>
+            <div id="grid">
+                <div id="exit"></div>
+            </div>
+            <div id="win-msg">
+                <h1>SOLVED!</h1>
+                <div id="win-stats"></div>
+                <button onclick="nextLevel()">Next Level</button>
+            </div>
+        </div>
+
+        <div id="controls">
+            <button class="game-btn" onclick="reset()">Reset</button>
+            <button class="game-btn" onclick="prevLevel()" id="btn-prev">Prev</button>
+            <button class="game-btn" onclick="nextLevel()" id="btn-next">Next</button>
+        </div>
+    </div>
+
+    <script>
+        const levels = [
+            [[2, 0, 'h', 2, true], [1, 0, 'h', 3, false], [2, 2, 'v', 2, false], [3, 0, 'v', 3, false], [4, 1, 'h', 2, false]],
+            [[2, 0, 'h', 2, true], [0, 2, 'v', 3, false], [0, 3, 'h', 3, false], [1, 3, 'v', 2, false], [3, 0, 'v', 3, false], [3, 1, 'h', 3, false], [5, 0, 'h', 2, false]],
+            [[2, 0, 'h', 2, true], [0, 2, 'v', 3, false], [0, 3, 'h', 3, false], [3, 0, 'v', 2, false], [5, 0, 'h', 2, false], [3, 1, 'h', 2, false], [3, 3, 'v', 2, false]],
+            [[2, 0, 'h', 2, true], [4, 0, 'v', 2, false], [3, 1, 'h', 2, false], [1, 3, 'v', 3, false], [1, 4, 'v', 2, false], [1, 5, 'v', 2, false], [4, 3, 'h', 2, false], [5, 3, 'h', 3, false]],
+            [[2, 1, 'h', 2, true], [0, 0, 'v', 3, false], [0, 1, 'v', 2, false], [0, 3, 'h', 3, false], [3, 2, 'v', 3, false], [1, 4, 'v', 2, false], [1, 5, 'v', 2, false], [3, 3, 'h', 3, false]],
+            [[2, 2, 'h', 2, true], [0, 0, 'h', 3, false], [1, 1, 'v', 2, false], [3, 1, 'v', 2, false], [1, 3, 'h', 3, false], [2, 4, 'v', 2, false], [2, 5, 'v', 3, false], [3, 2, 'v', 3, false], [5, 3, 'h', 3, false]],
+            [[2, 1, 'h', 2, true], [0, 1, 'v', 2, false], [0, 2, 'h', 3, false], [1, 3, 'v', 3, false], [1, 4, 'v', 2, false], [2, 5, 'v', 3, false], [4, 3, 'h', 2, false], [5, 4, 'h', 2, false]],
+            [[2, 3, 'h', 2, true], [2, 0, 'v', 2, false], [4, 0, 'v', 2, false], [2, 1, 'v', 2, false], [5, 1, 'h', 2, false], [0, 2, 'v', 2, false], [2, 2, 'v', 3, false], [0, 3, 'v', 2, false], [3, 3, 'h', 3, false], [0, 4, 'v', 2, false], [0, 5, 'v', 3, false], [5, 3, 'h', 2, false]],
+            [[2, 0, 'h', 2, true], [1, 0, 'h', 2, false], [0, 2, 'v', 3, false], [0, 3, 'h', 3, false], [1, 4, 'h', 2, false], [2, 4, 'v', 2, false], [2, 5, 'v', 2, false], [4, 0, 'v', 2, false], [4, 1, 'v', 2, false], [4, 3, 'v', 2, false], [4, 4, 'h', 2, false], [5, 4, 'h', 2, false]],
+            [[2, 1, 'h', 2, true], [0, 0, 'h', 3, false], [1, 0, 'v', 3, false], [1, 1, 'h', 2, false], [0, 3, 'v', 3, false], [1, 4, 'v', 2, false], [1, 5, 'v', 2, false], [3, 1, 'v', 2, false], [3, 2, 'h', 2, false], [3, 4, 'h', 2, false], [4, 2, 'v', 2, false], [4, 4, 'v', 2, false], [4, 5, 'v', 2, false]],
+            [[2, 0, 'h', 2, true], [0, 0, 'v', 2, false], [0, 2, 'h', 2, false], [0, 4, 'v', 3, false], [0, 5, 'v', 3, false], [1, 2, 'v', 2, false], [1, 3, 'v', 2, false], [3, 1, 'v', 2, false], [4, 3, 'v', 2, false], [3, 4, 'h', 2, false], [5, 0, 'h', 3, false]],
+            [[2, 1, 'h', 2, true], [0, 2, 'h', 3, false], [0, 4, 'v', 2, false], [1, 0, 'h', 2, false], [3, 0, 'v', 3, false], [1, 3, 'v', 3, false], [2, 5, 'v', 2, false], [4, 1, 'h', 3, false], [4, 4, 'v', 2, false], [5, 4, 'v', 1, false], [5, 1, 'h', 3, false]], 
+            [[2, 1, 'h', 2, true], [0, 0, 'h', 3, false], [1, 1, 'h', 2, false], [1, 3, 'v', 3, false], [3, 1, 'v', 2, false], [3, 4, 'h', 2, false], [4, 2, 'h', 2, false], [4, 4, 'v', 2, false], [5, 0, 'h', 3, false]],
+            [[2, 2, 'h', 2, true], [0, 0, 'h', 3, false], [1, 0, 'h', 2, false], [0, 4, 'v', 3, false], [2, 0, 'v', 2, false], [2, 1, 'v', 2, false], [3, 3, 'v', 2, false], [2, 5, 'v', 3, false], [4, 0, 'v', 2, false], [4, 1, 'v', 2, false], [4, 2, 'v', 2, false], [5, 3, 'h', 3, false]],
+            [[2, 1, 'h', 2, true], [0, 0, 'v', 3, false], [0, 1, 'h', 2, false], [0, 3, 'h', 3, false], [1, 1, 'h', 3, false], [2, 3, 'v', 3, false], [2, 4, 'v', 2, false], [3, 0, 'h', 2, false], [4, 4, 'h', 2, false]],
+            [[2, 0, 'h', 2, true], [0, 2, 'v', 3, false], [0, 3, 'h', 2, false], [1, 4, 'v', 2, false], [1, 5, 'v', 2, false], [3, 3, 'v', 2, false], [3, 4, 'h', 2, false], [3, 1, 'h', 2, false], [4, 1, 'v', 2, false], [4, 2, 'h', 2, false]],
+            [[2, 1, 'h', 2, true], [1, 0, 'h', 2, false], [2, 0, 'v', 3, false], [3, 2, 'h', 2, false], [4, 1, 'h', 2, false], [5, 2, 'h', 2, false], [0, 3, 'v', 3, false], [0, 4, 'v', 2, false], [2, 4, 'v', 3, false]],
+            [[2, 1, 'h', 2, true], [0, 0, 'h', 3, false], [1, 0, 'v', 2, false], [1, 1, 'h', 2, false], [3, 0, 'v', 2, false], [3, 1, 'v', 2, false], [5, 0, 'h', 3, false], [4, 2, 'h', 2, false], [1, 3, 'v', 3, false], [4, 4, 'v', 2, false], [1, 5, 'v', 2, false], [3, 4, 'h', 2, false]],
+            [[2, 2, 'h', 2, true], [1, 0, 'h', 2, false], [2, 0, 'v', 3, false], [5, 0, 'h', 2, false], [0, 2, 'v', 2, false], [3, 2, 'h', 2, false], [4, 1, 'h', 3, false], [0, 3, 'h', 2, false], [1, 4, 'v', 2, false], [3, 4, 'v', 2, false], [0, 5, 'v', 2, false], [3, 5, 'v', 2, false], [5, 4, 'h', 2, false]],
+            [[2, 0, 'h', 2, true], [0, 0, 'h', 3, false], [0, 5, 'v', 3, false], [1, 2, 'v', 2, false], [2, 2, 'v', 2, false], [4, 0, 'v', 2, false], [4, 2, 'h', 2, false], [4, 5, 'v', 2, false], [5, 2, 'h', 3, false]]
+        ];
+
+        let currentLvl = 0; let maxUnlocked = 0; let moveCount = 0;
+        let blocks = []; let unit = 0; let selectedBlock = null; 
+        let startPos = 0; let blockStartPos = 0; let startGridR = 0; let startGridC = 0;
+        let minLimit = 0; let maxLimit = 0;
+
+        const menuScreen = document.getElementById('menu-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const levelGrid = document.getElementById('level-grid');
+        const grid = document.getElementById('grid'); 
+        const winMsg = document.getElementById('win-msg');
+        const winStats = document.getElementById('win-stats');
+        const nextBtn = document.getElementById('btn-next');
+        const prevBtn = document.getElementById('btn-prev');
+        const moveDisplay = document.getElementById('move-counter');
+        const bestDisplay = document.getElementById('best-score');
+
+        window.addEventListener('load', () => { 
+            const saved = localStorage.getItem('mrKnoxRedSlideProgress');
+            if (saved) maxUnlocked = parseInt(saved);
+            showMenu();
+            window.addEventListener('resize', () => { if(gameScreen.style.display === 'flex') setTimeout(() => loadLevel(currentLvl), 100); }); 
+        });
+
+        function showMenu() {
+            gameScreen.style.display = 'none'; menuScreen.style.display = 'flex';
+            levelGrid.innerHTML = '';
+            const saved = localStorage.getItem('mrKnoxRedSlideProgress');
+            if (saved) maxUnlocked = parseInt(saved);
+
+            for (let i = 0; i < levels.length; i++) {
+                const btn = document.createElement('div');
+                const isLocked = i > maxUnlocked;
+                btn.className = isLocked ? 'lvl-btn locked' : 'lvl-btn';
+                const numSpan = document.createElement('span');
+                numSpan.className = 'lvl-num';
+                numSpan.innerText = (i + 1);
+                btn.appendChild(numSpan);
+                if (isLocked) {
+                    const lockIcon = document.createElement('span');
+                    lockIcon.className = 'lock-icon';
+                    lockIcon.innerText = '🔒';
+                    btn.appendChild(lockIcon);
+                } else {
+                    const key = 'mrKnoxBest_' + i;
+                    const best = localStorage.getItem(key);
+                    const scoreSpan = document.createElement('span');
+                    scoreSpan.className = 'lvl-score';
+                    scoreSpan.innerText = best ? `Best: ${best}` : 'New';
+                    btn.appendChild(scoreSpan);
+                    btn.onclick = () => switchToGame(i);
+                }
+                levelGrid.appendChild(btn);
+            }
+        }
+
+        function switchToGame(idx) {
+            menuScreen.style.display = 'none';
+            gameScreen.style.display = 'flex';
+            loadLevel(idx);
+        }
+
+        function playWinSound() {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+            const now = ctx.currentTime;
+            osc.frequency.setValueAtTime(800, now);
+            osc.frequency.exponentialRampToValueAtTime(1600, now + 0.15);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+            osc.start(now);
+            osc.stop(now + 0.15);
+        }
+
+        function saveProgress() {
+            if (currentLvl >= maxUnlocked) {
+                maxUnlocked = currentLvl + 1;
+                localStorage.setItem('mrKnoxRedSlideProgress', maxUnlocked);
+            }
+            updateButtons();
+        }
+
+        function updateButtons() {
+            prevBtn.disabled = (currentLvl === 0);
+            if (currentLvl < levels.length - 1 && currentLvl < maxUnlocked) nextBtn.disabled = false;
+            else nextBtn.disabled = true;
+        }
+
+        function loadLevel(idx) {
+            currentLvl = idx; moveCount = 0;
+            moveDisplay.innerText = "Moves: 0";
+            document.getElementById('level-label').innerText = `Level ${idx + 1}`; 
+            const key = 'mrKnoxBest_' + idx;
+            const savedBest = localStorage.getItem(key);
+            bestDisplay.innerText = savedBest ? `Best: ${savedBest}` : `Best: -`;
+            winMsg.style.display = 'none';
+            updateButtons();
+            const container = document.getElementById('game-container');
+            unit = container.offsetWidth / 6;
+            document.querySelectorAll('.block').forEach(b => b.remove()); 
+            blocks = [];
+            levels[currentLvl].forEach((data, i) => {
+                const [r, c, type, len, isTarget] = data; 
+                const el = document.createElement('div');
+                el.className = `block ${type} ${isTarget ? 'target' : ''}`;
+                if (type === 'h') { el.style.width = (len * unit - 6) + 'px'; el.style.height = (unit - 6) + 'px'; } 
+                else { el.style.width = (unit - 6) + 'px'; el.style.height = (len * unit - 6) + 'px'; }
+                const block = { id: i, el: el, r: r, c: c, type: type, len: len, isTarget: isTarget, currentPx: (type === 'h' ? c : r) * unit };
+                el.addEventListener('mousedown', (e) => startDrag(e, block)); 
+                el.addEventListener('touchstart', (e) => startDrag(e, block), {passive: false});
+                grid.appendChild(el); blocks.push(block); renderBlock(block);
+            });
+        }
+
+        function renderBlock(b) { 
+            const x = b.type === 'h' ? b.currentPx : b.c * unit; 
+            const y = b.type === 'v' ? b.currentPx : b.r * unit; 
+            b.el.style.transform = `translate(${x + 3}px, ${y + 3}px)`; 
+        }
+
+        function startDrag(e, b) { 
+            e.preventDefault(); selectedBlock = b; 
+            startGridR = b.r; startGridC = b.c;
+            const clientPos = e.touches ? (b.type === 'h' ? e.touches[0].clientX : e.touches[0].clientY) : (b.type === 'h' ? e.clientX : e.clientY); 
+            startPos = clientPos; blockStartPos = b.currentPx; 
+            calcLimits(b); 
+            document.addEventListener('mousemove', onMove); document.addEventListener('touchmove', onMove, {passive: false}); 
+            document.addEventListener('mouseup', onEnd); document.addEventListener('touchend', onEnd); 
+        }
+
+        function calcLimits(b) { 
+            let minC = 0; let maxC = 6 - b.len; 
+            blocks.forEach(other => { 
+                if (other.id === b.id) return; 
+                if (b.type === 'h') { 
+                    const otherRowEnd = other.type === 'v' ? other.r + other.len : other.r + 1; 
+                    if (b.r >= other.r && b.r < otherRowEnd) { 
+                        if (other.c < b.c) minC = Math.max(minC, other.c + (other.type==='h'?other.len:1)); 
+                        if (other.c > b.c) maxC = Math.min(maxC, other.c - b.len); 
+                    } 
+                } else { 
+                    const otherColEnd = other.type === 'h' ? other.c + other.len : other.c + 1; 
+                    if (b.c >= other.c && b.c < otherColEnd) { 
+                        if (other.r < b.r) minC = Math.max(minC, other.r + (other.type==='v'?other.len:1)); 
+                        if (other.r > b.r) maxC = Math.min(maxC, other.r - b.len); 
+                    } 
+                } 
+            }); 
+            if (b.isTarget && maxC === 4) maxC = 6; 
+            minLimit = minC * unit; maxLimit = maxC * unit; 
+        }
+
+        function onMove(e) { 
+            if (!selectedBlock) return; e.preventDefault(); 
+            const b = selectedBlock; 
+            const clientPos = e.touches ? (b.type === 'h' ? e.touches[0].clientX : e.touches[0].clientY) : (b.type === 'h' ? e.clientX : e.clientY); 
+            let newPx = Math.max(minLimit, Math.min(blockStartPos + (clientPos - startPos), maxLimit)); 
+            b.currentPx = newPx; renderBlock(b); 
+        }
+
+        function onEnd() { 
+            if (!selectedBlock) return; 
+            const b = selectedBlock; 
+            const nearestCell = Math.round(b.currentPx / unit); 
+            if (b.type === 'h') b.c = nearestCell; else b.r = nearestCell; 
+            b.currentPx = nearestCell * unit; 
+            renderBlock(b); 
+            if (b.r !== startGridR || b.c !== startGridC) { moveCount++; moveDisplay.innerText = "Moves: " + moveCount; }
+            if (b.isTarget && b.c >= 4) {
+                playWinSound(); saveProgress(); saveBestScore(currentLvl, moveCount);
+                winMsg.style.display = 'flex'; 
+            }
+            selectedBlock = null; 
+            document.removeEventListener('mousemove', onMove); document.removeEventListener('touchmove', onMove); 
+            document.removeEventListener('mouseup', onEnd); document.removeEventListener('touchend', onEnd); 
+        }
+
+        function saveBestScore(level, moves) {
+            const key = 'mrKnoxBest_' + level;
+            const prev = localStorage.getItem(key);
+            let best = moves;
+            if (prev) best = Math.min(parseInt(prev), moves);
+            localStorage.setItem(key, best);
+            bestDisplay.innerText = `Best: ${best}`;
+            winStats.innerHTML = `You took <strong>${moves}</strong> moves.<br>Your Best: <strong>${best}</strong>`;
+        }
+
+        function reset() { loadLevel(currentLvl); } 
+        function nextLevel() { if(currentLvl < levels.length-1 && currentLvl < maxUnlocked) loadLevel(currentLvl+1); } 
+        function prevLevel() { if(currentLvl > 0) loadLevel(currentLvl-1); }
+    </script>
+</body>
+</html>

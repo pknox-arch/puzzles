@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NeuroTrace: System Reboot</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fonts -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+        body {
+            background-color: #0a0a10;
+            color: #00ffcc;
+            font-family: 'Share Tech Mono', monospace;
+            overflow: hidden;
+            touch-action: none; /* Prevents scrolling on mobile while dragging */
+            user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* SCREENS TRANSITION */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: opacity 0.3s ease-in-out;
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .hidden-screen {
+            opacity: 0;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* HOME SCREEN */
+        #home-screen {
+            background: radial-gradient(circle at center, #112 0%, #050508 100%);
+            align-items: center;
+            justify-content: flex-start;
+            padding: 40px 20px;
+            z-index: 50;
+        }
+
+        .level-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 70vh;
+            overflow-y: auto;
+            padding: 10px;
+            /* Scrollbar styling */
+            scrollbar-width: thin;
+            scrollbar-color: #00ffcc #0a0a10;
+        }
+
+        /* CARD STYLES */
+        .level-card {
+            background: rgba(0, 20, 40, 0.6);
+            border: 1px solid #334;
+            border-radius: 4px;
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .level-card.unlocked:hover {
+            background: rgba(0, 255, 204, 0.1);
+            border-color: #00ffcc;
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+        }
+
+        .level-card.locked {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: #222;
+            background: rgba(0,0,0,0.5);
+        }
+
+        .level-num { font-size: 1.5rem; font-weight: bold; }
+        .level-score { font-size: 0.7rem; color: #888; margin-top: 4px; }
+        .level-card.unlocked .level-score { color: #00ffcc; }
+
+        /* HUD ELEMENTS */
+        .hud-panel {
+            pointer-events: auto;
+            background: rgba(0, 20, 40, 0.85);
+            border: 1px solid #00ffcc;
+            padding: 10px 20px;
+            border-radius: 4px;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.2);
+            backdrop-filter: blur(4px);
+        }
+
+        button.hud-btn {
+            pointer-events: auto;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #00ffcc;
+            color: #00ffcc;
+            padding: 12px 24px;
+            font-family: inherit;
+            font-size: 1rem;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 4px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button.hud-btn:hover:not(:disabled) {
+            background: #00ffcc;
+            color: #000;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.6);
+        }
+
+        button.hud-btn:active:not(:disabled) { transform: scale(0.95); }
+        button.hud-btn:disabled {
+            border-color: #333;
+            color: #555;
+            background: rgba(0, 0, 0, 0.3);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* MODALS */
+        #modal-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        #modal-overlay.active { opacity: 1; pointer-events: auto; }
+
+        .modal-box {
+            background: #001122;
+            border: 2px solid #00ffcc;
+            padding: 30px;
+            text-align: center;
+            max-width: 90%;
+            width: 400px;
+            box-shadow: 0 0 50px rgba(0, 255, 204, 0.3);
+        }
+
+        .instruction-tip {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 1.2rem;
+            pointer-events: none;
+            text-align: center;
+            text-shadow: 0 0 5px #000;
+            width: 80%;
+            z-index: 10;
+        }
+
+        .ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            display: flex; flex-direction: column; justify-content: space-between;
+            padding: 20px; box-sizing: border-box;
+        }
+
+        @media (max-width: 600px) {
+            .level-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+            .hud-panel { padding: 8px 12px; font-size: 0.8rem; }
+            button.hud-btn { padding: 8px 12px; font-size: 0.8rem; }
+            .level-num { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- HOME SCREEN -->
+<div id="home-screen" class="screen">
+    <div class="text-center mb-8">
+        <div class="text-4xl md:text-6xl font-bold mb-2 tracking-tighter" style="text-shadow: 0 0 20px #00ffcc;">NEUROTRACE</div>
+        <div class="text-xs md:text-sm text-gray-400 tracking-[0.5em] uppercase">System Level Select</div>
+    </div>
+    
+    <div id="level-grid" class="level-grid">
+        <!-- JS Generates Grid Here -->
+    </div>
+
+    <!-- Clear Data Utility -->
+    <div class="mt-8">
+        <button onclick="clearProgress()" class="text-xs text-red-900 hover:text-red-500 transition-colors uppercase tracking-widest border-b border-transparent hover:border-red-500 pb-1">
+            Reset System Data
+        </button>
+    </div>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game-screen" class="screen hidden-screen">
+    <div id="game-container" class="relative w-full h-full">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="tutorial-text" class="instruction-tip">
+            Tap <span style="color:#ffee00; font-weight:bold;">ANY NODE</span> to start.<br>
+            Trace all gray lines.
+        </div>
+    
+        <div class="ui-layer">
+            <div class="flex justify-between items-center w-full">
+                <!-- Navigation -->
+                <div class="flex items-center gap-2">
+                    <button id="home-btn" class="hud-btn" title="Return to Menu">⌂</button>
+                    <button id="prev-btn" class="hud-btn w-10 h-10 text-xl font-mono">&lt;</button>
+                    <div class="hud-panel text-center flex flex-col justify-center" style="min-width: 90px; height: 48px;">
+                        <div style="font-size: 0.6em; color: #888; line-height: 1;">LEVEL</div>
+                        <div id="level-display" style="font-size: 1.2em; font-weight: bold; line-height: 1.2;">1</div>
+                    </div>
+                    <button id="next-btn" class="hud-btn w-10 h-10 text-xl font-mono">&gt;</button>
+                </div>
+                
+                <button id="reset-btn" class="hud-btn">RESET</button>
+            </div>
+    
+            <div class="flex justify-between items-center w-full">
+                <button id="undo-btn" class="hud-btn">UNDO</button>
+                <div class="hud-panel text-center">
+                    <div style="font-size: 0.6em; color: #888;">INTEGRITY</div>
+                    <div id="progress-display" style="font-size: 1.2em; font-weight: bold;">0%</div>
+                </div>
+            </div>
+        </div>
+    
+        <!-- Modal -->
+        <div id="modal-overlay">
+            <div class="modal-box">
+                <h2 id="modal-title" class="text-2xl md:text-3xl font-bold mb-4 text-white">LEVEL COMPLETE</h2>
+                <div class="text-xl mb-4 text-yellow-300 font-mono" id="modal-time">Time: 12.4s</div>
+                <p id="modal-msg" class="mb-8 text-cyan-200 text-sm">Neural pathway established.</p>
+                <div class="flex gap-3">
+                    <button id="menu-btn" class="hud-btn flex-1">MENU</button>
+                    <button id="modal-btn" class="hud-btn flex-1 bg-cyan-900 border-cyan-400">NEXT</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    /**
+     * STORAGE ENGINE
+     * Wraps localStorage to prevent crashes in private modes/iframes
+     */
+    const DB = {
+        get: (key) => {
+            try { return localStorage.getItem(key); }
+            catch(e) { console.warn("Storage read failed (Cookies blocked?)", e); return null; }
+        },
+        set: (key, val) => {
+            try { localStorage.setItem(key, val); }
+            catch(e) { console.warn("Storage write failed (Cookies blocked?)", e); }
+        },
+        remove: (key) => {
+            try { localStorage.removeItem(key); }
+            catch(e) { console.warn("Storage delete failed", e); }
+        }
+    };
+
+    /**
+     * GAME CONFIGURATION
+     */
+    const COLORS = {
+        bg: '#0a0a10',
+        lineInactive: '#4a4a55',
+        lineActive: '#00ffcc',
+        lineCore: '#ffffff',
+        nodeIdle: '#ffee00',
+        nodeActive: '#00ffcc',
+        nodeStart: '#ffee00',
+        nodeCurrent: '#ffffff'
+    };
+
+    const CONFIG = {
+        nodeRadius: 15,
+        hitRadius: 40,
+        lineWidth: 6
+    };
+
+    // Initialize State from Storage
+    const savedUnlock = parseInt(DB.get('neurotrace_unlock'));
+    const savedScores = JSON.parse(DB.get('neurotrace_scores') || '{}');
+
+    const state = {
+        level: 1,
+        maxLevel: 30,
+        maxUnlocked: isNaN(savedUnlock) ? 1 : savedUnlock,
+        scores: savedScores, 
+        nodes: [],
+        edges: [],
+        path: [],
+        width: window.innerWidth,
+        height: window.innerHeight,
+        solved: false,
+        startTime: 0,
+        isActive: false
+    };
+
+    // Audio Context (Created on first interaction usually, but here globally)
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playTone(freq, type, duration) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    }
+
+    /**
+     * LEVEL DATA & GENERATION
+     */
+    const PREMADE_LEVELS = [
+        // 1: Triangle
+        { nodes: [[50,30], [25,70], [75,70]], edges: [[0,1],[1,2],[2,0]] },
+        // 2: Hourglass
+        { nodes: [[25,25], [75,25], [50,50], [25,75], [75,75]], edges: [[0,1],[1,2],[2,0], [2,3],[3,4],[4,2]] },
+        // 3: Envelope
+        { nodes: [[25,35], [75,35], [25,85], [75,85], [50,15]], edges: [[0,1],[1,3],[3,2],[2,0], [0,4],[4,1]] },
+        // 4: Pentagram
+        { nodes: [[50, 15], [85, 40], [70, 85], [30, 85], [15, 40]], edges: [[0,1], [0,2], [0,3], [0,4], [1,2], [1,3], [1,4], [2,3], [2,4], [3,4]] },
+        // 5: Double Diamond
+        { nodes: [[50,10], [20,50], [80,50], [50,90]], edges: [[0,1],[1,3],[3,2],[2,0], [1,2]] } 
+    ];
+
+    /** GEOMETRY HELPERS **/
+    // Calculate line intersection
+    function getIntersection(p1, p2, p3, p4) {
+        const d = (p2.x - p1.x) * (p4.y - p3.y) - (p2.y - p1.y) * (p4.x - p3.x);
+        if (d === 0) return null;
+        const u = ((p3.x - p1.x) * (p4.y - p3.y) - (p3.y - p1.y) * (p4.x - p3.x)) / d;
+        const v = ((p3.x - p1.x) * (p2.y - p1.y) - (p3.y - p1.y) * (p2.x - p1.x)) / d;
+        if (u > 0.01 && u < 0.99 && v > 0.01 && v < 0.99) {
+            return { x: p1.x + u * (p2.x - p1.x), y: p1.y + u * (p2.y - p1.y) };
+        }
+        return null;
+    }
+
+    // Split edges where they cross
+    function resolveIntersections(nodes, edges) {
+        let changed = true;
+        let limit = 20;
+        while (changed && limit-- > 0) {
+            changed = false;
+            for (let i = 0; i < edges.length; i++) {
+                for (let j = i + 1; j < edges.length; j++) {
+                    const e1 = edges[i];
+                    const e2 = edges[j];
+                    if (e1[0]===e2[0] || e1[0]===e2[1] || e1[1]===e2[0] || e1[1]===e2[1]) continue;
+                    
+                    const p1 = nodes[e1[0]], p2 = nodes[e1[1]];
+                    const p3 = nodes[e2[0]], p4 = nodes[e2[1]];
+                    
+                    const hit = getIntersection(p1, p2, p3, p4);
+                    if (hit) {
+                        const newId = nodes.length;
+                        nodes.push(hit);
+                        // Remove old edges
+                        edges.splice(j, 1);
+                        edges.splice(i, 1);
+                        // Add 4 new edges to center
+                        edges.push([e1[0], newId]);
+                        edges.push([e1[1], newId]);
+                        edges.push([e2[0], newId]);
+                        edges.push([e2[1], newId]);
+                        changed = true;
+                        break;
+                    }
+                }
+                if (changed) break;
+            }
+        }
+        return { nodes, edges };
+    }
+
+    // Ensure Eulerian Circuit (No odd degree nodes)
+    function cleanAndBalance(nodes, edges) {
+        // Remove duplicate edges first
+        const uniqueEdges = [];
+        const seen = new Set();
+        edges.forEach(e => {
+            const u = Math.min(e[0], e[1]);
+            const v = Math.max(e[0], e[1]);
+            const key = `${u}-${v}`;
+            if (!seen.has(key) && u !== v) {
+                seen.add(key);
+                uniqueEdges.push([u, v]);
+            }
+        });
+        edges = uniqueEdges;
+
+        // Count degrees
+        let adj = Array(nodes.length).fill().map(() => new Set());
+        edges.forEach(e => {
+            adj[e[0]].add(e[1]);
+            adj[e[1]].add(e[0]);
+        });
+
+        const oddNodes = nodes.map((_, i) => i).filter(i => adj[i].size % 2 !== 0);
+
+        // Toggle edges between pairs of odd nodes to fix parity
+        for (let i = 0; i < oddNodes.length; i += 2) {
+            if (i + 1 >= oddNodes.length) break;
+            const u = oddNodes[i];
+            const v = oddNodes[i+1];
+            
+            const existsIndex = edges.findIndex(e => 
+                (e[0]===u && e[1]===v) || (e[0]===v && e[1]===u)
+            );
+
+            if (existsIndex !== -1) {
+                edges.splice(existsIndex, 1); 
+            } else {
+                edges.push([u, v]);
+            }
+        }
+        
+        return { nodes, edges };
+    }
+
+    /** LEVEL GENERATION PIPELINE **/
+    function createLevel(lvlIndex) {
+        let rawData;
+        if (lvlIndex <= 5) {
+            const base = PREMADE_LEVELS[lvlIndex - 1];
+            rawData = { 
+                nodes: base.nodes.map(n => ({x: n[0], y: n[1]})), 
+                edges: base.edges.map(e => [...e])
+            };
+        } else {
+            rawData = generateProceduralRaw(lvlIndex);
+        }
+
+        // Processing Pipeline
+        let processed = resolveIntersections(rawData.nodes, rawData.edges);
+        processed = cleanAndBalance(processed.nodes, processed.edges);
+        processed = resolveIntersections(processed.nodes, processed.edges); // Final cleanup
+
+        // Fit to screen
+        const padding = Math.min(state.width, state.height) * 0.2;
+        const drawW = state.width - padding * 2;
+        const drawH = state.height - padding * 2;
+        
+        let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+        processed.nodes.forEach(n => {
+            if(n.x < minX) minX = n.x; if(n.x > maxX) maxX = n.x;
+            if(n.y < minY) minY = n.y; if(n.y > maxY) maxY = n.y;
+        });
+
+        const contentW = maxX - minX || 100;
+        const contentH = maxY - minY || 100;
+        const scale = Math.min(drawW / contentW, drawH / contentH);
+        
+        const offsetX = (state.width - contentW * scale) / 2 - minX * scale;
+        const offsetY = (state.height - contentH * scale) / 2 - minY * scale;
+
+        state.nodes = processed.nodes.map((n, i) => ({
+            id: i,
+            x: n.x * scale + offsetX,
+            y: n.y * scale + offsetY
+        }));
+
+        state.edges = processed.edges.map((e, i) => ({
+            u: e[0], v: e[1], active: false, id: i
+        }));
+
+        state.path = [];
+        state.solved = false;
+        state.startTime = 0; 
+        updateUI();
+        
+        // Show tutorial only on level 1
+        document.getElementById('tutorial-text').style.display = (state.level === 1) ? 'block' : 'none';
+        document.getElementById('tutorial-text').style.opacity = '1';
+    }
+
+    function generateProceduralRaw(lvl) {
+        const n = Math.min(6 + Math.floor(lvl/3), 12);
+        const nodes = [];
+        for(let i=0; i<n; i++) {
+            const angle = (i/n) * Math.PI * 2;
+            const r = 35 + Math.random()*10;
+            nodes.push({ x: 50 + Math.cos(angle)*r, y: 50 + Math.sin(angle)*r });
+        }
+        const edges = [];
+        for(let i=0; i<n; i++) edges.push([i, (i+1)%n]); // Base cycle
+        
+        const chords = 3 + Math.floor(lvl/2);
+        for(let k=0; k<chords; k++) {
+            let a = Math.floor(Math.random()*n);
+            let b = Math.floor(Math.random()*n);
+            if (a !== b) edges.push([a, b]);
+        }
+        return { nodes, edges };
+    }
+
+    /** SCENE & UI MANAGEMENT **/
+    const screenHome = document.getElementById('home-screen');
+    const screenGame = document.getElementById('game-screen');
+    const levelGrid = document.getElementById('level-grid');
+
+    function showHome() {
+        screenGame.classList.add('hidden-screen');
+        screenHome.classList.remove('hidden-screen');
+        renderLevelGrid();
+        state.isActive = false;
+    }
+
+    function showGame(lvl) {
+        state.level = lvl;
+        screenHome.classList.add('hidden-screen');
+        screenGame.classList.remove('hidden-screen');
+        createLevel(lvl);
+        state.isActive = true;
+    }
+
+    // Global clear function for the "Reset System Data" button
+    window.clearProgress = function() {
+        if(confirm("WARNING: This will wipe all level progress and scores.\n\nContinue?")) {
+            DB.remove('neurotrace_unlock');
+            DB.remove('neurotrace_scores');
+            location.reload();
+        }
+    };
+
+    function renderLevelGrid() {
+        levelGrid.innerHTML = '';
+        for (let i = 1; i <= state.maxLevel; i++) {
+            const isUnlocked = i <= state.maxUnlocked;
+            const score = state.scores[i];
+            
+            const card = document.createElement('div');
+            card.className = `level-card ${isUnlocked ? 'unlocked' : 'locked'}`;
+            
+            if (isUnlocked) {
+                card.onclick = () => showGame(i);
+                const scoreText = score ? `${score}s` : '--';
+                card.innerHTML = `
+                    <div class="level-num">${i}</div>
+                    <div class="level-score">BEST: ${scoreText}</div>
+                `;
+            } else {
+                card.innerHTML = `
+                    <div class="text-2xl opacity-50">🔒</div>
+                    <div class="level-score">LOCKED</div>
+                `;
+            }
+            levelGrid.appendChild(card);
+        }
+    }
+
+    /** GAME LOOP & RENDER **/
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Mouse Interaction State
+    const interaction = { x:0, y:0, isDragging: false };
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        state.width = canvas.width;
+        state.height = canvas.height;
+        if(state.isActive) createLevel(state.level);
+    }
+    window.addEventListener('resize', resize);
+
+    function getNodeAt(x, y) {
+        return state.nodes.find(n => {
+            const dx = n.x - x;
+            const dy = n.y - y;
+            return (dx*dx + dy*dy) < CONFIG.hitRadius**2;
+        });
+    }
+
+    function draw() {
+        if (!state.isActive) {
+            requestAnimationFrame(draw);
+            return;
+        }
+
+        ctx.fillStyle = COLORS.bg;
+        ctx.fillRect(0, 0, state.width, state.height);
+
+        // Draw Edges
+        state.edges.forEach(e => {
+            const u = state.nodes[e.u];
+            const v = state.nodes[e.v];
+            
+            ctx.beginPath();
+            ctx.moveTo(u.x, u.y);
+            ctx.lineTo(v.x, v.y);
+            
+            if (e.active) {
+                ctx.lineWidth = CONFIG.lineWidth;
+                ctx.strokeStyle = COLORS.lineActive;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = COLORS.lineActive;
+                ctx.stroke();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = COLORS.lineCore;
+                ctx.shadowBlur = 0;
+                ctx.stroke();
+            } else {
+                ctx.lineWidth = CONFIG.lineWidth;
+                ctx.strokeStyle = COLORS.lineInactive;
+                ctx.lineCap = 'round';
+                ctx.shadowBlur = 0;
+                ctx.stroke();
+            }
+        });
+
+        // Elastic Band (Dragging)
+        if (interaction.isDragging && state.path.length > 0 && !state.solved) {
+            const lastNode = state.nodes[state.path[state.path.length-1]];
+            ctx.beginPath();
+            ctx.moveTo(lastNode.x, lastNode.y);
+            ctx.lineTo(interaction.x, interaction.y);
+            ctx.strokeStyle = COLORS.lineActive;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // Draw Nodes
+        state.nodes.forEach(n => {
+            const isCurrent = state.path.length > 0 && state.path[state.path.length-1] === n.id;
+            const isVisited = state.path.includes(n.id);
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            
+            let r = CONFIG.nodeRadius;
+            if (isCurrent) r *= 1.3;
+            // Pulse effect for starting nodes if path is empty
+            if (state.path.length === 0) r = CONFIG.nodeRadius + Math.sin(Date.now()/200)*2;
+
+            ctx.arc(n.x, n.y, r, 0, Math.PI*2);
+
+            if (isCurrent) {
+                ctx.fillStyle = COLORS.nodeCurrent;
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = COLORS.nodeActive;
+            } else if (state.path.length === 0) {
+                ctx.fillStyle = COLORS.nodeStart;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = COLORS.nodeStart;
+            } else if (isVisited) {
+                ctx.fillStyle = COLORS.nodeActive;
+            } else {
+                ctx.fillStyle = COLORS.nodeIdle;
+            }
+            ctx.fill();
+            // Center dot
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, r * 0.4, 0, Math.PI*2);
+            ctx.fill();
+        });
+
+        requestAnimationFrame(draw);
+    }
+
+    /** GAME LOGIC **/
+    function attemptMove(nodeId) {
+        if (state.path.length === 0) {
+            state.startTime = Date.now();
+            state.path.push(nodeId);
+            playTone(440, 'sine', 0.1);
+            document.getElementById('tutorial-text').style.opacity = '0';
+            return;
+        }
+        
+        const currentId = state.path[state.path.length - 1];
+        if (currentId === nodeId) return;
+
+        // Find available edge between current and target
+        const edge = state.edges.find(e => 
+            ((e.u === currentId && e.v === nodeId) || (e.u === nodeId && e.v === currentId)) && !e.active
+        );
+
+        if (edge) {
+            edge.active = true;
+            state.path.push(nodeId);
+            playTone(440 + (state.path.length * 50), 'sine', 0.1);
+            checkWinCondition();
+        }
+    }
+
+    function checkWin
